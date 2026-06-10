@@ -26,6 +26,12 @@ const navItems: NavItem[] = [
     roles: ["ADMIN", "CAJERO"],
   },
   {
+    href: "/admin/corte",
+    label: "Corte",
+    shortLabel: "Corte",
+    roles: ["ADMIN", "CAJERO"],
+  },
+  {
     href: "/cocina",
     label: "Cocina",
     shortLabel: "Cocina",

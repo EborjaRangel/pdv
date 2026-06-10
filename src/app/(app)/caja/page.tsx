@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageButton, PageHeader } from "@/components/PageHeader";
 import { apiFetch } from "@/lib/api-client";
@@ -222,7 +223,17 @@ export default function CajaPage() {
     <div className="min-w-0">
       <PageHeader
         title="Caja"
-        action={<PageButton onClick={loadOrders}>Actualizar</PageButton>}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/pedidos"
+              className="touch-target rounded-xl border border-orange-300 bg-orange-50 px-4 py-2.5 text-sm font-medium text-orange-800"
+            >
+              Tomar pedido
+            </Link>
+            <PageButton onClick={loadOrders}>Actualizar</PageButton>
+          </div>
+        }
       />
 
       {cashSession?.closed ? (

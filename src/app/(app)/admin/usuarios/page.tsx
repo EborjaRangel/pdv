@@ -74,6 +74,9 @@ export default function UsuariosAdminPage() {
                 <option value="MESERO">Mesero</option>
                 <option value="COCINA">Cocina</option>
               </FormSelect>
+              <p className="text-xs text-zinc-500">
+                Cajero: caja, cobro, corte y tomar pedidos. Mesero: solo pedidos.
+              </p>
             </div>
             {apiError ? <p className="mt-3 text-sm text-red-600">{apiError}</p> : null}
             <button

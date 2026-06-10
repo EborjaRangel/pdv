@@ -11,6 +11,7 @@ const secret = new TextEncoder().encode(
 const publicPaths = ["/login"];
 
 const rolePaths: Record<string, Role[]> = {
+  "/admin/corte": ["ADMIN", "CAJERO"],
   "/admin": ["ADMIN"],
   "/caja": ["ADMIN", "CAJERO"],
   "/pedidos": ["ADMIN", "MESERO", "CAJERO"],
