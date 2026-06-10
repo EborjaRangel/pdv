@@ -1,0 +1,164 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  CAJERO
+  MESERO
+  COCINA
+}
+
+enum OrderStatus {
+  PENDING
+  PREPARING
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+}
+
+enum Currency {
+  MXN
+  USD
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(MESERO)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ordersCreated Order[]     @relation("OrderCreatedBy")
+  ordersPaid    Order[]     @relation("OrderPaidBy")
+  cashOpens     CashOpen[]
+  cashCloses    CashClose[]
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dishes Dish[]
+}
+
+model Dish {
+  id         String   @id @default(cuid())
+  name       String
+  priceMxn   Decimal  @db.Decimal(10, 2)
+  priceUsd   Decimal? @db.Decimal(10, 2)
+  imageUrl   String?
+  active     Boolean  @default(true)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model BusinessSettings {
+  id             String   @id @default("default")
+  restaurantName String   @default("Mi Restaurante")
+  address        String?
+  phone          String?
+  rfc            String?
+  exchangeRate   Decimal  @default(17.5) @db.Decimal(10, 4)
+  updatedAt      DateTime @updatedAt
+}
+
+model DailyOrderCounter {
+  id         String   @id @default(cuid())
+  date       DateTime @db.Date @unique
+  lastNumber Int      @default(0)
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  dailyNumber   Int
+  orderDate     DateTime    @db.Date
+  customerName  String
+  customerPhone String?
+  status        OrderStatus @default(PENDING)
+  subtotalMxn   Decimal     @db.Decimal(10, 2)
+  totalMxn      Decimal     @db.Decimal(10, 2)
+  totalUsd      Decimal     @db.Decimal(10, 2)
+  cancelReason  String?
+  cancelledAt   DateTime?
+  paidAt        DateTime?
+  createdById   String
+  createdBy     User        @relation("OrderCreatedBy", fields: [createdById], references: [id])
+  paidById      String?
+  paidBy        User?       @relation("OrderPaidBy", fields: [paidById], references: [id])
+  items         OrderItem[]
+  payments      Payment[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([orderDate, dailyNumber])
+  @@index([status])
+  @@index([orderDate])
+}
+
+model OrderItem {
+  id       String  @id @default(cuid())
+  orderId  String
+  order    Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  dishId   String?
+  dishName String
+  priceMxn Decimal @db.Decimal(10, 2)
+  priceUsd Decimal @db.Decimal(10, 2)
+  quantity Int
+  notes    String?
+}
+
+model Payment {
+  id           String        @id @default(cuid())
+  orderId      String
+  order        Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  method       PaymentMethod
+  currency     Currency
+  amount       Decimal       @db.Decimal(10, 2)
+  cashReceived Decimal?      @db.Decimal(10, 2)
+  changeGiven  Decimal?      @db.Decimal(10, 2)
+  createdAt    DateTime      @default(now())
+}
+
+model CashOpen {
+  id         String   @id @default(cuid())
+  openDate   DateTime @db.Date @unique
+  notes      String?
+  openedById String
+  openedBy   User     @relation(fields: [openedById], references: [id])
+  openedAt   DateTime @default(now())
+}
+
+model CashClose {
+  id             String   @id @default(cuid())
+  closeDate      DateTime @db.Date @unique
+  totalCashMxn   Decimal  @default(0) @db.Decimal(10, 2)
+  totalCardMxn   Decimal  @default(0) @db.Decimal(10, 2)
+  totalCashUsd   Decimal  @default(0) @db.Decimal(10, 2)
+  totalCardUsd   Decimal  @default(0) @db.Decimal(10, 2)
+  orderCount     Int      @default(0)
+  cancelledCount Int      @default(0)
+  notes          String?
+  closedById     String
+  closedBy       User     @relation(fields: [closedById], references: [id])
+  closedAt       DateTime @default(now())
+}

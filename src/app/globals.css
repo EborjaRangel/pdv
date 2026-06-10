@@ -1,0 +1,255 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fafafa;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  overflow-x: hidden;
+}
+
+html {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+.app-shell {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.app-main {
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 768px) {
+  .app-main {
+    padding-bottom: 1.5rem;
+  }
+}
+
+.bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.page-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+@media (min-width: 640px) {
+  .page-title {
+    font-size: 1.5rem;
+  }
+}
+
+.touch-target {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}
+
+.input-touch {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid #d4d4d8;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.input-touch:focus {
+  border-color: #ea580c;
+  outline: none;
+}
+
+.scroll-x-tabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.scroll-x-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.card {
+  border-radius: 1rem;
+  border: 1px solid #e4e4e7;
+  background: white;
+  padding: 1rem;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+}
+
+@media (min-width: 640px) {
+  .card {
+    padding: 1.25rem;
+  }
+}
+
+.modal-sheet {
+  width: 100%;
+  max-height: min(92vh, 900px);
+  overflow-y: auto;
+  border-radius: 1rem 1rem 0 0;
+  background: white;
+  padding: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .modal-sheet {
+    max-width: 32rem;
+    border-radius: 1rem;
+    padding: 1.5rem;
+  }
+}
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 3mm;
+  }
+
+  body {
+    background: white;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+
+.ticket {
+  width: 72mm;
+  max-width: 72mm;
+  margin: 0 auto;
+  padding: 2mm 0;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #000;
+}
+
+.ticket-center {
+  text-align: center;
+}
+
+.ticket-business {
+  text-align: center;
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.ticket-title {
+  text-align: center;
+  font-weight: bold;
+  font-size: 12px;
+  margin: 4px 0;
+}
+
+.ticket-order-big {
+  text-align: center;
+  font-size: 22px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  margin: 6px 0;
+}
+
+.ticket-meta {
+  text-align: center;
+  font-size: 11px;
+}
+
+.ticket-divider {
+  border-top: 1px dashed #000;
+  margin: 6px 0;
+}
+
+.ticket-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.ticket-table th {
+  text-align: left;
+  font-weight: bold;
+  border-bottom: 1px solid #000;
+  padding-bottom: 2px;
+}
+
+.ticket-table td {
+  vertical-align: top;
+  padding: 2px 0;
+}
+
+.col-cant {
+  width: 10mm;
+  text-align: center;
+}
+
+.col-desc {
+  text-align: left;
+  padding-right: 2mm;
+}
+
+.col-importe {
+  width: 18mm;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ticket-totals {
+  margin-top: 4px;
+}
+
+.ticket-total-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 4mm;
+  margin: 2px 0;
+}
+
+.ticket-total-main {
+  font-weight: bold;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.ticket-payment-block {
+  margin-bottom: 4px;
+}
+
+.ticket-footer {
+  text-align: center;
+  margin-top: 6px;
+  font-size: 11px;
+}
+
+.ticket-cocina .col-desc {
+  font-size: 12px;
+  font-weight: bold;
+}
+
