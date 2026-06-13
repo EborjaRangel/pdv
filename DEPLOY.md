@@ -1,168 +1,101 @@
-# Publicar PDV: Railway (API + BD) + Vercel (Frontend)
-
-## Arquitectura
+# Deploy paso a paso: Railway (API + BD) + Vercel (Frontend)
 
 ```
-[Celular/PC] → Vercel (Next.js) → Railway (Express) → PostgreSQL (Railway)
+Usuario → Vercel (Next.js) → Railway (Express) → PostgreSQL (Railway)
 ```
 
 ---
 
-## Paso 0 — Subir el código a GitHub
+## Antes de empezar — checklist
 
-El proyecto debe estar en un repositorio de GitHub (Railway y Vercel se conectan desde ahí).
+- [ ] Código subido a GitHub (`https://github.com/EborjaRangel/pdv`)
+- [ ] Cuenta en [railway.app](https://railway.app)
+- [ ] Cuenta en [vercel.com](https://vercel.com)
+- [ ] Inventa un `AUTH_SECRET` largo (mín. 32 caracteres) y **guárdalo** — lo usarás en Railway **y** Vercel
+
+Ejemplo de secreto (cámbialo por uno propio):
+
+```
+IZofufm1LP3eRR1QB-vZmMmQ4lo4IDVX0ELu2pRpvdI
+```
+
+---
+
+## PASO 1 — Subir el código a GitHub
+
+Si tienes cambios locales sin subir:
 
 ```powershell
 cd c:\Users\Administrador\Desktop\pdv
-git init
 git add .
-git commit -m "PDV restaurante - frontend Next.js y backend Express"
-```
-
-1. Crea un repo vacío en [github.com/new](https://github.com/new) (sin README).
-2. Conecta y sube:
-
-```powershell
-git branch -M main
-git remote add origin https://github.com/TU_USUARIO/pdv.git
-git push -u origin main
+git commit -m "Preparar deploy Railway + Vercel"
+git push origin main
 ```
 
 ---
 
-## Paso 1 — Railway: PostgreSQL
+## PASO 2 — Railway: PostgreSQL
 
-1. Entra a [railway.app](https://railway.app) → **New Project**.
-2. **Add Service → Database → PostgreSQL**.
-3. Abre el servicio PostgreSQL → pestaña **Variables** → copia `DATABASE_URL` (o usa **Connect**).
-
----
-
-## Paso 2 — Railway: Backend (API)
-
-> **Antes de empezar:** ya debes tener el **Paso 0** (código en GitHub) y el **Paso 1** (PostgreSQL creado en el mismo proyecto Railway).
-
-### 2.1 Crear el servicio del API
-
-1. Entra a [railway.app](https://railway.app) e inicia sesión.
-2. Abre el **mismo proyecto** donde creaste PostgreSQL en el Paso 1.
-3. Arriba a la derecha, clic en **+ New** (o **Add Service**).
-4. Elige **GitHub Repo**.
-5. Si es la primera vez, Railway te pedirá **conectar tu cuenta de GitHub** → autoriza el acceso.
-6. Busca y selecciona tu repositorio **`pdv`** (el que subiste en el Paso 0).
-7. Railway creará un servicio nuevo. Verás dos cajas en el proyecto:
-   - Una dice **Postgres** (o PostgreSQL)
-   - Otra con el nombre de tu repo (ej. `pdv`)
-
-**Tip:** renombra los servicios para no confundirte:
-- Clic en el servicio PostgreSQL → **Settings** → **Service Name** → `postgres`
-- Clic en el servicio del repo → **Settings** → **Service Name** → `pdv-api`
+1. [railway.app](https://railway.app) → **New Project**
+2. **Add Service** → **Database** → **PostgreSQL**
+3. Clic en el servicio → **Settings** → renombra a `postgres`
 
 ---
 
-### 2.2 Decirle a Railway que el código del API está en `backend/`
+## PASO 3 — Railway: Backend (API)
 
-1. Clic en el servicio **`pdv-api`** (no el de Postgres).
-2. Ve a la pestaña **Settings**.
-3. Baja hasta **Root Directory** (o **Source** → **Root Directory**).
-4. Escribe exactamente:
+### 3.1 Crear servicio
+
+1. En el **mismo proyecto** → **+ New** → **GitHub Repo**
+2. Elige el repo **`pdv`**
+3. Renombra el servicio a **`pdv-api`**
+
+### 3.2 Root Directory (MUY IMPORTANTE)
+
+1. Servicio **`pdv-api`** → **Settings**
+2. **Root Directory** → escribe:
 
 ```
 backend
 ```
 
-5. Clic en **Save** (o el botón de guardar que aparezca).
+3. **Save**
 
-> Si no pones `backend`, Railway intentará desplegar el frontend (Next.js) y fallará.
+> Si no pones `backend`, Railway despliega Next.js y falla.
 
----
+### 3.3 Variables de entorno
 
-### 2.3 Conectar la base de datos (variables de entorno)
-
-1. Sigue en el servicio **`pdv-api`**.
-2. Ve a la pestaña **Variables**.
-3. Clic en **+ New Variable** (o **Raw Editor**) y agrega **una por una**:
-
-| Variable | Qué poner | Ejemplo |
-|----------|-----------|---------|
-| `DATABASE_URL` | Referencia al Postgres de Railway | `${{postgres.DATABASE_URL}}` |
-| `AUTH_SECRET` | Texto largo y aleatorio (mín. 32 caracteres) | `mi-secreto-super-largo-para-produccion-2026` |
-| `FRONTEND_URL` | Temporal hasta tener Vercel | `http://localhost:3000` |
-| `API_PUBLIC_URL` | Lo llenas en el paso 2.4 (déjalo vacío un momento) | *(pendiente)* |
-
-#### Cómo poner `DATABASE_URL` correctamente
-
-**Opción A — Referencia automática (recomendada):**
-
-1. En **Variables** del servicio `pdv-api`, clic en **+ New Variable**.
-2. Nombre: `DATABASE_URL`
-3. En el valor, Railway muestra un botón **Add Reference** o un icono `{}`.
-4. Elige el servicio **postgres** (tu PostgreSQL).
-5. Selecciona la variable **`DATABASE_URL`**.
-6. Railway escribirá algo como:
-
-```
-${{postgres.DATABASE_URL}}
-```
-
-> El nombre `postgres` debe coincidir con el **Service Name** de tu base de datos. Si lo renombraste distinto, usa ese nombre.
-
-**Opción B — Copiar manual:**
-
-1. Abre el servicio **postgres** → pestaña **Variables**.
-2. Copia el valor completo de `DATABASE_URL`.
-3. Pégalo en el servicio `pdv-api` como variable `DATABASE_URL`.
-
-#### Sobre `AUTH_SECRET`
-
-- Inventa una cadena larga (letras, números, símbolos).
-- **Guárdala en un bloc de notas** — la necesitarás igual en Vercel (Paso 3).
-- No uses `admin123` ni contraseñas cortas.
-
-4. Después de agregar variables, Railway redeployará solo. Espera a que termine.
-
----
-
-### 2.4 Crear la URL pública del API
-
-1. En el servicio **`pdv-api`**, ve a **Settings**.
-2. Baja a la sección **Networking** (o **Public Networking**).
-3. Clic en **Generate Domain** (o **Add Public Domain**).
-4. Railway te dará una URL como:
-
-```
-https://pdv-api-production-a1b2.up.railway.app
-```
-
-5. **Copia esa URL completa** (sin `/` al final).
-
-6. Vuelve a **Variables** del servicio `pdv-api` y agrega o edita:
+Servicio **`pdv-api`** → **Variables** → agrega:
 
 | Variable | Valor |
 |----------|-------|
-| `API_PUBLIC_URL` | `https://pdv-api-production-a1b2.up.railway.app` |
+| `DATABASE_URL` | `${{postgres.DATABASE_URL}}` *(Add Reference → postgres)* |
+| `AUTH_SECRET` | Tu secreto largo (el mismo en Vercel) |
+| `FRONTEND_URL` | `http://localhost:3000` *(temporal, lo cambias en paso 6)* |
+| `API_PUBLIC_URL` | *(vacío por ahora)* |
 
-*(usa tu URL real, no este ejemplo)*
+### 3.4 URL pública del API
 
----
-
-### 2.5 Verificar que el deploy funcionó
-
-1. En el servicio **`pdv-api`**, abre la pestaña **Deployments**.
-2. El último deploy debe decir **Success** / **Active** (verde).
-3. Clic en el deploy → **View Logs** y revisa que aparezca algo como:
-
-```
-Prisma schema loaded...
-The database is already in sync...
-Admin creado: admin@pdv.local / admin123
-PDV API listening on port XXXX
-```
-
-4. Abre en el navegador (cambia por tu dominio):
+1. **`pdv-api`** → **Settings** → **Networking**
+2. **Generate Domain**
+3. Copia la URL, ejemplo:
 
 ```
-https://TU-DOMINIO.up.railway.app/health
+https://pdv-api-production-xxxx.up.railway.app
+```
+
+4. Vuelve a **Variables** y pon:
+
+| Variable | Valor |
+|----------|-------|
+| `API_PUBLIC_URL` | `https://pdv-api-production-xxxx.up.railway.app` |
+
+### 3.5 Verificar Railway
+
+Espera deploy **Success** (verde). Abre en el navegador:
+
+```
+https://TU-URL-RAILWAY.app/health
 ```
 
 Debe responder:
@@ -171,159 +104,140 @@ Debe responder:
 {"ok":true}
 ```
 
-5. Prueba también:
+Login inicial (creado automáticamente):
 
-```
-https://TU-DOMINIO.up.railway.app/api/health
-```
-
-También debe responder `{"ok":true}`.
-
-#### Si el deploy falla
-
-| Error en logs | Qué hacer |
-|---------------|-----------|
-| `datasource.url property is required` | Falta `DATABASE_URL` en Variables |
-| `Authentication failed` (Prisma) | `DATABASE_URL` mal copiada; usa la referencia `${{postgres.DATABASE_URL}}` |
-| Build falla en la raíz | **Root Directory** no es `backend` |
-| `Application failed to respond` | Revisa logs; suele ser error de BD o variables faltantes |
+| Email | Contraseña |
+|-------|------------|
+| `admin@pdv.local` | `admin123` |
 
 ---
 
-### 2.6 Qué hace Railway al arrancar (automático)
+## PASO 4 — Vercel: Frontend
 
-El archivo `backend/railway.toml` ya está configurado:
-
-1. **Build:** `npm install` + `npm run build`
-2. **Start:** `npm run db:push` → crea tablas en PostgreSQL
-3. **Start:** `npm run db:seed` → crea usuario admin y datos de ejemplo
-4. **Start:** `npm start` → levanta el API en el puerto que Railway asigne
-
-No necesitas ejecutar nada manualmente en la consola.
-
----
-
-### 2.7 Usuario inicial (creado por el seed)
-
-| Campo | Valor |
-|-------|-------|
-| Email | `admin@pdv.local` |
-| Contraseña | `admin123` |
-
-Cámbiala después del primer acceso en producción.
-
----
-
-### 2.8 Resumen de variables del servicio `pdv-api`
-
-Cuando termines el Paso 2, debes tener **exactamente** esto:
-
-```
-DATABASE_URL=${{postgres.DATABASE_URL}}
-AUTH_SECRET=tu-secreto-largo-guardado-en-bloc
-FRONTEND_URL=http://localhost:3000
-API_PUBLIC_URL=https://tu-dominio.up.railway.app
-```
-
-> `FRONTEND_URL` la actualizarás en el **Paso 4** cuando tengas la URL de Vercel.
-
-**Guarda la URL del API** — la usarás en Vercel como `NEXT_PUBLIC_API_URL`.
-
----
-
-## Paso 3 — Vercel: Frontend
-
-1. Entra a [vercel.com](https://vercel.com) → **Add New Project** → importa el repo `pdv`.
-2. **Root Directory:** raíz del repo (dejar vacío / `.`).
-3. Framework: **Next.js** (detectado automáticamente).
+1. [vercel.com](https://vercel.com) → **Add New** → **Project**
+2. Importa el repo **`pdv`**
+3. **Root Directory:** dejar vacío (raíz del repo)
+4. Framework: **Next.js** (auto)
 
 ### Variables de entorno en Vercel
 
+**Settings → Environment Variables** (Production):
+
 | Variable | Valor |
 |----------|-------|
-| `NEXT_PUBLIC_API_URL` | URL del API en Railway (sin `/` final) |
+| `NEXT_PUBLIC_API_URL` | URL de Railway **sin** `/` final |
 | `AUTH_SECRET` | **Exactamente el mismo** que en Railway |
 
-4. **Deploy** y copia la URL de producción (ej. `https://pdv.vercel.app`).
+Ejemplo:
+
+```
+NEXT_PUBLIC_API_URL=https://pdv-api-production-xxxx.up.railway.app
+AUTH_SECRET=IZofufm1LP3eRR1QB-vZmMmQ4lo4IDVX0ELu2pRpvdI
+```
+
+5. Clic **Deploy**
+6. Copia la URL de producción, ejemplo:
+
+```
+https://pdv.vercel.app
+```
 
 ---
 
-## Paso 4 — Enlazar front y back (CORS)
+## PASO 5 — Probar Vercel (fallará login si falta paso 6)
 
-Vuelve a **Railway → servicio API → Variables** y actualiza:
+Abre `https://TU-APP.vercel.app/login`
 
-| Variable | Valor |
-|----------|-------|
-| `FRONTEND_URL` | URL de Vercel (ej. `https://pdv.vercel.app`) |
-
-Si usas previews de Vercel, puedes poner varias URLs separadas por coma:
-
-```
-https://pdv.vercel.app,https://pdv-git-main-tuusuario.vercel.app
-```
-
-Redeploy del API en Railway después de cambiar variables.
+Si el login no funciona todavía, es normal — falta CORS (siguiente paso).
 
 ---
 
-## Paso 5 — Verificación
+## PASO 6 — Enlazar front y back (CORS)
 
-1. Abre la URL de Vercel → login con `admin@pdv.local` / `admin123`.
-2. **Caja** → Abrir caja del día.
-3. **Pedidos** → crear un pedido.
-4. **Caja** → cobrar → imprimir tickets.
-5. **Cocina** → marcar pedido y entregar.
-6. **Admin → Corte** → revisar totales y cerrar (solo si no hay pendientes).
+1. Railway → servicio **`pdv-api`** → **Variables**
+2. Edita **`FRONTEND_URL`**:
+
+```
+https://TU-APP.vercel.app
+```
+
+Sin `/` al final. Si tienes varias URLs:
+
+```
+https://pdv.vercel.app,https://pdv-git-main-eborjarangel.vercel.app
+```
+
+3. Railway redeploya solo. Espera **Success**.
+
+---
+
+## PASO 7 — Verificación final
+
+1. Abre la URL de **Vercel** → `/login`
+2. Entra con `admin@pdv.local` / `admin123`
+3. **Caja** → Abrir caja del día
+4. **Pedidos** → crear pedido → debe ir a Caja
+5. **Caja** → cobrar
+6. **Cocina** → marcar y entregar
+
+---
+
+## Errores comunes (2ª vez que falla)
+
+| Síntoma | Causa | Solución |
+|---------|-------|----------|
+| Railway build falla en Next.js | Root Directory no es `backend` | Paso 3.2 |
+| `/health` no responde en Railway | Deploy falló o sin dominio | Paso 3.4, revisar logs |
+| Login en Vercel no funciona | `FRONTEND_URL` mal o distinto `AUTH_SECRET` | Pasos 3.3, 4 y 6 |
+| "No hay conexión con el API" | `NEXT_PUBLIC_API_URL` mal en Vercel | Paso 4, redeploy Vercel |
+| CORS error en consola del navegador | `FRONTEND_URL` no coincide con URL de Vercel | Paso 6 — URL **exacta** con `https://` |
+| `AUTH_SECRET` distintos | JWT inválido tras login | Mismo valor en Railway y Vercel |
+
+---
+
+## Variables — resumen final
+
+**Railway (`pdv-api`):**
+
+```
+DATABASE_URL=${{postgres.DATABASE_URL}}
+AUTH_SECRET=tu-secreto
+FRONTEND_URL=https://tu-app.vercel.app
+API_PUBLIC_URL=https://tu-api.up.railway.app
+```
+
+**Vercel:**
+
+```
+NEXT_PUBLIC_API_URL=https://tu-api.up.railway.app
+AUTH_SECRET=tu-secreto
+```
 
 ---
 
 ## Desarrollo local
 
-**Terminal 1 — API:**
-
 ```powershell
+# Terminal 1
 cd backend
 copy .env.example .env
-# Edita DATABASE_URL y AUTH_SECRET
-npm install
 npm run db:setup
 npm run dev
-```
 
-**Terminal 2 — Frontend:**
-
-```powershell
+# Terminal 2
 cd ..
 copy .env.example .env
-npm install
 npm run dev
 ```
 
 - Frontend: http://localhost:3000  
-- API: http://localhost:4000  
+- API: http://localhost:4000
 
 ---
 
-## CLI alternativa (opcional)
+## Notas
 
-```powershell
-# Vercel (desde la raíz del repo)
-npx vercel login
-npx vercel --prod
-
-# Railway (desde backend/)
-cd backend
-npx @railway/cli login
-npx @railway/cli init
-npx @railway/cli up
-```
-
----
-
-## Notas importantes
-
-- **`AUTH_SECRET` debe ser idéntico** en Railway y Vercel.
-- **`FRONTEND_URL` en Railway** debe coincidir con la URL exacta de Vercel (CORS).
-- **Imágenes de platillos** en Railway se guardan en disco efímero; al redeploy se pierden. Para producción conviene S3/Cloudinary más adelante.
-- **No subas** `backend/.env` a GitHub (contiene contraseñas).
-- Si cambias la URL de Vercel, actualiza `FRONTEND_URL` en Railway.
+- Tras cambiar variables en Vercel → **Redeploy**
+- Tras cambiar variables en Railway → redeploy automático
+- Imágenes de platillos en Railway se pierden al redeploy (disco efímero)
+- No subas `.env` a GitHub

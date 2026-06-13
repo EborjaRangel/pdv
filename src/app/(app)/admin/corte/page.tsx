@@ -270,7 +270,9 @@ export default function CorteAdminPage() {
         <p className="mt-4 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-700">
           Corte cerrado por {closed.closedBy.name} el{" "}
           {new Date(closed.closedAt).toLocaleString("es-MX")}. No se pueden tomar
-          más pedidos hoy.
+          más pedidos mientras la caja siga cerrada. Para volver a operar hoy, usa{" "}
+          <strong>Reabrir caja del día</strong> en Caja. Al día siguiente, usa{" "}
+          <strong>Abrir caja del día</strong>.
         </p>
       ) : (
         <div className="card mt-4">

@@ -71,7 +71,11 @@ export default function CocinaPage() {
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {orders.map((order) => (
+        {orders.map((order) => {
+          const next = nextStatus[order.status];
+          const isDeliver = next === "DELIVERED";
+
+          return (
           <article key={order.id} className="card">
             <div className="flex items-start justify-between gap-2">
               <div>
@@ -100,18 +104,30 @@ export default function CocinaPage() {
 
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <strong className="text-base">{formatMxn(Number(order.totalMxn))}</strong>
-              {nextStatus[order.status] ? (
+              {next ? (
                 <button
                   type="button"
-                  onClick={() => updateStatus(order.id, nextStatus[order.status])}
-                  className="touch-target w-full rounded-xl bg-orange-600 px-4 py-3 text-sm font-medium text-white sm:w-auto"
+                  onClick={() => updateStatus(order.id, next)}
+                  aria-label={isDeliver ? "Marcar entregado" : `Marcar ${statusLabels[next]}`}
+                  className={`touch-target flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-medium sm:min-w-[4.5rem] sm:w-auto ${
+                    isDeliver
+                      ? "bg-green-600 text-white hover:bg-green-700"
+                      : "bg-orange-600 text-white hover:bg-orange-700"
+                  }`}
                 >
-                  Marcar {statusLabels[nextStatus[order.status]]}
+                  {isDeliver ? (
+                    <span className="text-2xl font-bold leading-none" aria-hidden="true">
+                      ✓
+                    </span>
+                  ) : (
+                    `Marcar ${statusLabels[next]}`
+                  )}
                 </button>
               ) : null}
             </div>
           </article>
-        ))}
+          );
+        })}
       </div>
 
       {orders.length === 0 ? (

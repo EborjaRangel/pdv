@@ -30,8 +30,14 @@ type PaymentLine = {
   cashReceived: string;
 };
 
+function paymentMethodLabel(method: PaymentLine["method"]) {
+  return method === "CASH" ? "Efectivo" : "Tarjeta";
+}
+
 type CashSession = {
   canTakeOrders: boolean;
+  canOpenCash: boolean;
+  canReopenCash: boolean;
   blockReason: string | null;
   opened: { openedAt: string; openedBy: { name: string } } | null;
   closed: { closedAt: string; closedBy: { name: string } } | null;
@@ -102,10 +108,41 @@ export default function CajaPage() {
       if (payment.method !== "CASH") return null;
       const amount = Number(payment.amount || 0);
       const received = Number(payment.cashReceived || 0);
-      if (!received || received < amount) return null;
-      return received - amount;
+      if (amount <= 0 || !received || received < amount) return null;
+      return Math.round((received - amount) * 100) / 100;
     });
   }, [payments]);
+
+  const paymentBreakdown = useMemo(() => {
+    return payments
+      .map((payment, index) => ({ payment, index }))
+      .filter(({ payment }) => Number(payment.amount) > 0)
+      .map(({ payment, index }) => {
+        const amount = Number(payment.amount);
+        const received =
+          payment.method === "CASH" ? Number(payment.cashReceived || 0) : null;
+        return {
+          index,
+          method: payment.method,
+          currency: payment.currency,
+          label: `${paymentMethodLabel(payment.method)} (${payment.currency})`,
+          amount,
+          received,
+          change: cashChangePreview[index],
+        };
+      });
+  }, [payments, cashChangePreview]);
+
+  const orderTotalMxn = selectedOrder ? Number(selectedOrder.totalMxn) : 0;
+  const remainingMxn = Math.max(0, Math.round((orderTotalMxn - paidEquivalent) * 100) / 100);
+  const paymentCoversTotal = selectedOrder ? paidEquivalent >= orderTotalMxn : false;
+  const cashLinesValid = paymentBreakdown.every((line) => {
+    if (line.method !== "CASH") return true;
+    return line.received != null && line.received >= line.amount;
+  });
+  const canConfirmPayment = Boolean(
+    selectedOrder && paymentBreakdown.length > 0 && paymentCoversTotal && cashLinesValid,
+  );
 
   function formatPaymentMoney(value: number, currency: "MXN" | "USD") {
     return currency === "MXN" ? formatMxn(value) : formatUsd(value);
@@ -124,11 +161,30 @@ export default function CajaPage() {
     setMessage("");
   }
 
-  function addPaymentLine() {
+  function addPaymentLine(method: PaymentLine["method"] = "CARD") {
     setPayments((current) => [
       ...current,
-      { method: "CARD", currency: "MXN", amount: "", cashReceived: "" },
+      { method, currency: "MXN", amount: "", cashReceived: "" },
     ]);
+  }
+
+  function updatePaymentLine(index: number, patch: Partial<PaymentLine>) {
+    setPayments((current) =>
+      current.map((line, i) => {
+        if (i !== index) return line;
+        const next = { ...line, ...patch };
+        if (patch.method === "CARD") {
+          next.cashReceived = "";
+        }
+        return next;
+      }),
+    );
+  }
+
+  function removePaymentLine(index: number) {
+    setPayments((current) =>
+      current.length <= 1 ? current : current.filter((_, i) => i !== index),
+    );
   }
 
   async function submitPayment() {
@@ -219,6 +275,30 @@ export default function CajaPage() {
     loadOrders();
   }
 
+  async function reopenCashRegister() {
+    setOpening(true);
+    setMessage("");
+    const response = await apiFetch("/api/cash-reopen", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const data = await response.json();
+    setOpening(false);
+    if (!response.ok) {
+      setMessage(data.error ?? "No se pudo reabrir caja");
+      return;
+    }
+    loadOrders();
+  }
+
+  const canOpenCash =
+    cashSession?.canOpenCash ??
+    Boolean(cashSession && !cashSession.opened && !cashSession.closed);
+  const canReopenCash =
+    cashSession?.canReopenCash ??
+    Boolean(cashSession?.opened && cashSession?.closed);
+
   return (
     <div className="min-w-0">
       <PageHeader
@@ -236,18 +316,35 @@ export default function CajaPage() {
         }
       />
 
-      {cashSession?.closed ? (
-        <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-          Corte del día realizado por {cashSession.closed.closedBy.name} el{" "}
-          {new Date(cashSession.closed.closedAt).toLocaleString("es-MX")}. No se
-          aceptan más pedidos hoy.
-        </div>
-      ) : cashSession?.opened ? (
+      {cashSession?.opened && !cashSession.closed ? (
         <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
           Caja abierta por {cashSession.opened.openedBy.name} el{" "}
           {new Date(cashSession.opened.openedAt).toLocaleString("es-MX")}
         </div>
-      ) : (
+      ) : null}
+
+      {cashSession?.closed ? (
+        <div className="card mb-4 border-green-200 bg-green-50">
+          <p className="font-semibold text-green-900">Corte del día realizado</p>
+          <p className="mt-1 text-sm text-green-800">
+            Cerrado por {cashSession.closed.closedBy.name} el{" "}
+            {new Date(cashSession.closed.closedAt).toLocaleString("es-MX")}. No se aceptan
+            más pedidos mientras la caja siga cerrada.
+          </p>
+          {canReopenCash ? (
+            <button
+              type="button"
+              onClick={reopenCashRegister}
+              disabled={opening}
+              className="touch-target mt-3 w-full rounded-xl bg-orange-600 px-4 py-3.5 font-semibold text-white disabled:opacity-50 sm:w-auto"
+            >
+              {opening ? "Reabriendo..." : "Reabrir caja del día"}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {canOpenCash ? (
         <div className="card mb-4">
           <p className="font-semibold text-amber-900">Caja sin abrir</p>
           <p className="mt-1 text-sm text-amber-800">
@@ -262,7 +359,7 @@ export default function CajaPage() {
             {opening ? "Abriendo..." : "Abrir caja del día"}
           </button>
         </div>
-      )}
+      ) : null}
 
       {message ? (
         <p className="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -372,21 +469,28 @@ export default function CajaPage() {
 
             <div className="mt-4 space-y-3">
               {payments.map((payment, index) => (
-                <div key={index} className="rounded-xl bg-zinc-50 p-3">
+                <div key={index} className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-zinc-800">
+                      Pago {index + 1} · {paymentMethodLabel(payment.method)}
+                    </p>
+                    {payments.length > 1 ? (
+                      <button
+                        type="button"
+                        onClick={() => removePaymentLine(index)}
+                        className="text-sm text-red-600"
+                      >
+                        Quitar
+                      </button>
+                    ) : null}
+                  </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <select
                       value={payment.method}
                       onChange={(e) =>
-                        setPayments((current) =>
-                          current.map((line, i) =>
-                            i === index
-                              ? {
-                                  ...line,
-                                  method: e.target.value as "CASH" | "CARD",
-                                }
-                              : line,
-                          ),
-                        )
+                        updatePaymentLine(index, {
+                          method: e.target.value as PaymentLine["method"],
+                        })
                       }
                       className="input-touch"
                     >
@@ -396,16 +500,9 @@ export default function CajaPage() {
                     <select
                       value={payment.currency}
                       onChange={(e) =>
-                        setPayments((current) =>
-                          current.map((line, i) =>
-                            i === index
-                              ? {
-                                  ...line,
-                                  currency: e.target.value as "MXN" | "USD",
-                                }
-                              : line,
-                          ),
-                        )
+                        updatePaymentLine(index, {
+                          currency: e.target.value as PaymentLine["currency"],
+                        })
                       }
                       className="input-touch"
                     >
@@ -413,67 +510,112 @@ export default function CajaPage() {
                       <option value="USD">USD</option>
                     </select>
                   </div>
-                  <input
-                    value={payment.amount}
-                    onChange={(e) =>
-                      setPayments((current) =>
-                        current.map((line, i) =>
-                          i === index ? { ...line, amount: e.target.value } : line,
-                        ),
-                      )
-                    }
-                    placeholder="Monto a pagar"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="input-touch mt-2"
-                  />
+                  <label className="mt-2 block text-xs font-medium text-zinc-600">
+                    Monto con {paymentMethodLabel(payment.method).toLowerCase()}
+                    <input
+                      value={payment.amount}
+                      onChange={(e) =>
+                        updatePaymentLine(index, { amount: e.target.value })
+                      }
+                      placeholder="0.00"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="input-touch mt-1"
+                    />
+                  </label>
                   {payment.method === "CASH" ? (
-                    <>
+                    <label className="mt-2 block text-xs font-medium text-zinc-600">
+                      Con cuánto paga (billete recibido)
                       <input
                         value={payment.cashReceived}
                         onChange={(e) =>
-                          setPayments((current) =>
-                            current.map((line, i) =>
-                              i === index
-                                ? { ...line, cashReceived: e.target.value }
-                                : line,
-                            ),
-                          )
+                          updatePaymentLine(index, { cashReceived: e.target.value })
                         }
-                        placeholder="Con cuánto paga"
+                        placeholder="Ej. 500"
                         type="number"
                         step="0.01"
                         min="0"
-                        className="input-touch mt-2"
-                        required
+                        className="input-touch mt-1"
                       />
-                      {cashChangePreview[index] != null ? (
-                        <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">
-                          Cambio:{" "}
-                          {formatPaymentMoney(
-                            cashChangePreview[index]!,
-                            payment.currency,
-                          )}
-                        </p>
-                      ) : null}
-                    </>
+                    </label>
+                  ) : null}
+                  {cashChangePreview[index] != null ? (
+                    <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">
+                      Cambio a entregar:{" "}
+                      {formatPaymentMoney(cashChangePreview[index]!, payment.currency)}
+                    </p>
                   ) : null}
                 </div>
               ))}
             </div>
 
-            <button
-              type="button"
-              onClick={addPaymentLine}
-              className="mt-3 text-sm text-orange-700"
-            >
-              + Agregar forma de pago
-            </button>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => addPaymentLine("CASH")}
+                className="rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+              >
+                + Efectivo
+              </button>
+              <button
+                type="button"
+                onClick={() => addPaymentLine("CARD")}
+                className="rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+              >
+                + Tarjeta
+              </button>
+            </div>
 
-            <p className="mt-4 text-sm">
-              Cubierto: {formatMxn(paidEquivalent)} /{" "}
-              {formatMxn(Number(selectedOrder.totalMxn))}
+            {paymentBreakdown.length > 0 ? (
+              <div className="mt-4 rounded-xl border border-orange-200 bg-orange-50/60 p-3">
+                <p className="text-sm font-semibold text-orange-900">Desglose de pago</p>
+                <ul className="mt-2 space-y-2 text-sm">
+                  {paymentBreakdown.map((line) => (
+                    <li
+                      key={line.index}
+                      className="rounded-lg bg-white/80 px-3 py-2 text-zinc-800"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-medium">{line.label}</span>
+                        <span>{formatPaymentMoney(line.amount, line.currency)}</span>
+                      </div>
+                      {line.method === "CASH" && line.received ? (
+                        <div className="mt-1 space-y-0.5 text-zinc-600">
+                          <p>Recibido: {formatPaymentMoney(line.received, line.currency)}</p>
+                          {line.change != null ? (
+                            <p className="font-semibold text-green-800">
+                              Cambio: {formatPaymentMoney(line.change, line.currency)}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-3 space-y-1 border-t border-orange-200 pt-3 text-sm">
+                  <div className="flex justify-between">
+                    <span>Total pagado</span>
+                    <strong>{formatMxn(paidEquivalent)}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Total del pedido</span>
+                    <strong>{formatMxn(orderTotalMxn)}</strong>
+                  </div>
+                  {remainingMxn > 0 ? (
+                    <p className="font-medium text-red-700">
+                      Faltan {formatMxn(remainingMxn)} por cubrir
+                    </p>
+                  ) : (
+                    <p className="font-medium text-green-800">Pago completo</p>
+                  )}
+                </div>
+              </div>
+            ) : null}
+
+            <p className="mt-4 text-sm text-zinc-600">
+              Puedes combinar efectivo y tarjeta. En efectivo indica el billete recibido para
+              calcular el cambio.
             </p>
 
             <div className="mt-5 flex flex-col gap-2 sm:flex-row">
@@ -487,7 +629,8 @@ export default function CajaPage() {
               <button
                 type="button"
                 onClick={submitPayment}
-                className="touch-target flex-1 rounded-xl bg-orange-600 px-4 py-3.5 text-base font-semibold text-white"
+                disabled={!canConfirmPayment}
+                className="touch-target flex-1 rounded-xl bg-orange-600 px-4 py-3.5 text-base font-semibold text-white disabled:opacity-50"
               >
                 Confirmar cobro
               </button>

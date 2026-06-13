@@ -691,6 +691,40 @@ router.post(
   },
 );
 
+router.post(
+  "/cash-reopen",
+  requireAuth,
+  requireRoles("ADMIN", "CAJERO"),
+  async (_req, res) => {
+    try {
+      const openDate = todayDateOnly();
+      const existingClose = await prisma.cashClose.findUnique({
+        where: { closeDate: openDate },
+      });
+      if (!existingClose) {
+        throw new ApiError("No hay corte registrado hoy para reabrir", 400);
+      }
+
+      const existingOpen = await prisma.cashOpen.findUnique({
+        where: { openDate },
+        include: { openedBy: { select: { name: true } } },
+      });
+      if (!existingOpen) {
+        throw new ApiError("No hay apertura de caja registrada hoy", 400);
+      }
+
+      await prisma.cashClose.delete({ where: { closeDate: openDate } });
+
+      res.json({
+        reopened: true,
+        opened: existingOpen,
+      });
+    } catch (error) {
+      handleError(error, res);
+    }
+  },
+);
+
 router.get(
   "/cash-close",
   requireAuth,
@@ -724,6 +758,8 @@ router.get(
         closed: existingClose,
         opened: session.opened,
         canTakeOrders: session.canTakeOrders,
+        canOpenCash: session.canOpenCash,
+        canReopenCash: session.canReopenCash,
         blockReason: session.blockReason,
         closeReadiness,
         summary,

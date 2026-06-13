@@ -33,6 +33,8 @@ export async function middleware(request: NextRequest) {
 
   if (
     publicPaths.some((path) => pathname.startsWith(path)) ||
+    pathname.startsWith("/api") ||
+    pathname === "/health" ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon")
   ) {
@@ -63,5 +65,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|.*\\.png$).*)"],
+  matcher: ["/((?!_next/static|_next/image|api|health|.*\\.png$).*)"],
 };

@@ -1,17 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/api-client";
 import { formatOrderNumber } from "@/lib/format";
 import { TicketView } from "@/components/TicketView";
 
 export default function ImprimirPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const auto = searchParams.get("auto") === "1";
-  const [ticketType, setTicketType] = useState<"cliente" | "cocina">("cliente");
-  const [printedKitchen, setPrintedKitchen] = useState(false);
   const [data, setData] = useState<{
     order: Parameters<typeof TicketView>[0]["order"];
     settings: Parameters<typeof TicketView>[0]["settings"];
@@ -33,22 +32,7 @@ export default function ImprimirPage() {
     if (!auto || !data) return;
     const timer = setTimeout(() => window.print(), 600);
     return () => clearTimeout(timer);
-  }, [auto, data, ticketType]);
-
-  useEffect(() => {
-    if (!auto) return;
-
-    function handleAfterPrint() {
-      if (ticketType === "cliente" && !printedKitchen) {
-        setPrintedKitchen(true);
-        setTicketType("cocina");
-        return;
-      }
-    }
-
-    window.addEventListener("afterprint", handleAfterPrint);
-    return () => window.removeEventListener("afterprint", handleAfterPrint);
-  }, [auto, ticketType, printedKitchen]);
+  }, [auto, data]);
 
   if (!data) {
     return <p className="p-4">Cargando ticket...</p>;
@@ -59,36 +43,28 @@ export default function ImprimirPage() {
       <div className="no-print mb-4 flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() => setTicketType("cliente")}
-          className={`touch-target rounded-lg px-3 py-2.5 text-sm ${
-            ticketType === "cliente" ? "bg-orange-600 text-white" : "border"
-          }`}
+          onClick={() => router.push("/pedidos")}
+          className="touch-target rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium"
         >
           Cliente
         </button>
         <button
           type="button"
-          onClick={() => setTicketType("cocina")}
-          className={`touch-target rounded-lg px-3 py-2.5 text-sm ${
-            ticketType === "cocina" ? "bg-orange-600 text-white" : "border"
-          }`}
+          onClick={() => router.push("/cocina")}
+          className="touch-target rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium"
         >
           Cocina
         </button>
         <button
           type="button"
           onClick={() => window.print()}
-          className="rounded-lg border px-3 py-2 text-sm"
+          className="touch-target rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white"
         >
-          Imprimir
+          Imprimir / Guardar
         </button>
       </div>
 
-      <TicketView
-        order={data.order}
-        settings={data.settings}
-        type={ticketType}
-      />
+      <TicketView order={data.order} settings={data.settings} type="cliente" />
     </div>
   );
 }

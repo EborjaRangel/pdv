@@ -15,6 +15,8 @@ export async function getCashSessionStatus(date = todayDateOnly()) {
   ]);
 
   const canTakeOrders = !!opened && !closed;
+  const canOpenCash = !opened && !closed;
+  const canReopenCash = !!opened && !!closed;
   let blockReason: string | null = null;
   if (!opened) {
     blockReason = "Debe abrir caja antes de tomar pedidos";
@@ -27,6 +29,8 @@ export async function getCashSessionStatus(date = todayDateOnly()) {
     opened,
     closed,
     canTakeOrders,
+    canOpenCash,
+    canReopenCash,
     blockReason,
   };
 }

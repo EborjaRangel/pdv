@@ -156,44 +156,55 @@ export function TicketView({ order, settings, type }: TicketProps) {
       {order.payments && order.payments.length > 0 ? (
         <>
           <Divider />
-          <p className="ticket-title">FORMA DE PAGO</p>
-          {order.payments.map((payment, index) => (
-            <div key={index} className="ticket-payment-block">
-              <div className="ticket-total-row">
-                <span>
-                  {payment.method === "CASH" ? "Efectivo" : "Tarjeta"} (
-                  {payment.currency})
-                </span>
-                <span>
-                  {payment.currency === "MXN"
-                    ? formatMxn(Number(payment.amount))
-                    : formatUsd(Number(payment.amount))}
-                </span>
-              </div>
-              {payment.method === "CASH" && payment.cashReceived ? (
-                <>
-                  <div className="ticket-total-row">
-                    <span>Recibido</span>
-                    <span>
-                      {payment.currency === "MXN"
-                        ? formatMxn(Number(payment.cashReceived))
-                        : formatUsd(Number(payment.cashReceived))}
-                    </span>
-                  </div>
-                  {payment.changeGiven ? (
+          <p className="ticket-title">DESGLOSE DE PAGO</p>
+          {order.payments.map((payment, index) => {
+            const methodLabel = payment.method === "CASH" ? "Efectivo" : "Tarjeta";
+            const amountFormatted =
+              payment.currency === "MXN"
+                ? formatMxn(Number(payment.amount))
+                : formatUsd(Number(payment.amount));
+            const received =
+              payment.cashReceived != null ? Number(payment.cashReceived) : null;
+            const change =
+              payment.changeGiven != null
+                ? Number(payment.changeGiven)
+                : received != null
+                  ? Math.round((received - Number(payment.amount)) * 100) / 100
+                  : null;
+
+            return (
+              <div key={index} className="ticket-payment-block">
+                <div className="ticket-total-row">
+                  <span>
+                    {methodLabel} {payment.currency}
+                  </span>
+                  <span>{amountFormatted}</span>
+                </div>
+                {payment.method === "CASH" && received != null ? (
+                  <>
                     <div className="ticket-total-row">
-                      <span>Cambio</span>
+                      <span>Recibido</span>
                       <span>
                         {payment.currency === "MXN"
-                          ? formatMxn(Number(payment.changeGiven))
-                          : formatUsd(Number(payment.changeGiven))}
+                          ? formatMxn(received)
+                          : formatUsd(received)}
                       </span>
                     </div>
-                  ) : null}
-                </>
-              ) : null}
-            </div>
-          ))}
+                    {change != null ? (
+                      <div className="ticket-total-row ticket-change-row">
+                        <span>Cambio</span>
+                        <span>
+                          {payment.currency === "MXN"
+                            ? formatMxn(change)
+                            : formatUsd(change)}
+                        </span>
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
+              </div>
+            );
+          })}
         </>
       ) : null}
 

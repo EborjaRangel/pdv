@@ -1,6 +1,7 @@
 "use client";
 
 import { Form, Formik } from "formik";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { FormField } from "@/components/FormField";
 import { apiFetch } from "@/lib/api-client";
@@ -33,9 +34,11 @@ type CashSession = {
 };
 
 export default function PedidosPage() {
+  const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [exchangeRate, setExchangeRate] = useState(17.5);
   const [loading, setLoading] = useState(true);
@@ -45,25 +48,30 @@ export default function PedidosPage() {
 
   useEffect(() => {
     async function load() {
-      const [categoriesRes, dishesRes, settingsRes, sessionRes] = await Promise.all([
-        apiFetch("/api/categories"),
-        apiFetch("/api/dishes?active=true"),
-        apiFetch("/api/settings"),
-        apiFetch("/api/cash-session"),
-      ]);
-      const categoriesData = await categoriesRes.json();
-      const dishesData = await dishesRes.json();
-      const settingsData = await settingsRes.json();
-      const sessionData = await sessionRes.json();
-      setCategories(categoriesData.filter((c: Category) => c.active));
-      setDishes(dishesData);
-      if (settingsData?.exchangeRate) {
-        setExchangeRate(Number(settingsData.exchangeRate));
+      try {
+        const [categoriesRes, dishesRes, settingsRes, sessionRes] = await Promise.all([
+          apiFetch("/api/categories"),
+          apiFetch("/api/dishes?active=true"),
+          apiFetch("/api/settings"),
+          apiFetch("/api/cash-session"),
+        ]);
+        const categoriesData = await categoriesRes.json();
+        const dishesData = await dishesRes.json();
+        const settingsData = await settingsRes.json();
+        const sessionData = await sessionRes.json();
+        setCategories(categoriesData.filter((c: Category) => c.active));
+        setDishes(dishesData);
+        if (settingsData?.exchangeRate) {
+          setExchangeRate(Number(settingsData.exchangeRate));
+        }
+        if (sessionRes.ok) {
+          setCashSession(sessionData);
+        }
+      } catch {
+        setMessage("No se pudo cargar el menú. Recarga la página.");
+      } finally {
+        setLoading(false);
       }
-      if (sessionRes.ok) {
-        setCashSession(sessionData);
-      }
-      setLoading(false);
     }
     load();
   }, []);
@@ -71,9 +79,20 @@ export default function PedidosPage() {
   const ordersBlocked = cashSession ? !cashSession.canTakeOrders : false;
 
   const filteredDishes = useMemo(() => {
-    if (selectedCategory === "all") return dishes;
-    return dishes.filter((dish) => dish.categoryId === selectedCategory);
-  }, [dishes, selectedCategory]);
+    let result = dishes;
+    if (selectedCategory !== "all") {
+      result = result.filter((dish) => dish.categoryId === selectedCategory);
+    }
+    const query = searchQuery.trim().toLowerCase();
+    if (query.length >= 3) {
+      result = result.filter(
+        (dish) =>
+          dish.name.toLowerCase().includes(query) ||
+          dish.category.name.toLowerCase().includes(query),
+      );
+    }
+    return result;
+  }, [dishes, selectedCategory, searchQuery]);
 
   const totals = useMemo(() => {
     const totalMxn = cart.reduce(
@@ -135,7 +154,7 @@ export default function PedidosPage() {
 
   return (
     <Formik
-      initialValues={{ customerName: "", customerPhone: "" }}
+      initialValues={{ customerName: "Venta Mostrador", customerPhone: "" }}
       validationSchema={orderCustomerSchema}
       onSubmit={async (values, { setSubmitting, resetForm }) => {
         setMessage("");
@@ -174,11 +193,9 @@ export default function PedidosPage() {
           return;
         }
 
-        setMessage(
-          `Pedido ${String(data.dailyNumber).padStart(3, "0")} creado. Total: ${formatMxn(data.totalMxn)}`,
-        );
         setCart([]);
         resetForm();
+        router.push("/caja");
       }}
     >
       {({ isSubmitting }) => (
@@ -200,7 +217,7 @@ export default function PedidosPage() {
               <FormField
                 label="Nombre del cliente *"
                 name="customerName"
-                placeholder="Nombre del cliente"
+                placeholder="Venta Mostrador"
               />
               <FormField
                 label="Teléfono (opcional)"
@@ -237,6 +254,18 @@ export default function PedidosPage() {
               ))}
             </div>
 
+            <label className="mb-4 block">
+              <span className="sr-only">Buscar platillo</span>
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar platillo (mín. 3 letras)..."
+                className="input-touch w-full"
+                autoComplete="off"
+              />
+            </label>
+
             <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-2 xl:grid-cols-3">
               {filteredDishes.map((dish) => (
                 <button
@@ -266,6 +295,14 @@ export default function PedidosPage() {
                 </button>
               ))}
             </div>
+
+            {filteredDishes.length === 0 ? (
+              <p className="mt-4 text-center text-sm text-zinc-500">
+                {searchQuery.trim().length >= 3
+                  ? "No hay platillos que coincidan con la búsqueda"
+                  : "No hay platillos en esta categoría"}
+              </p>
+            ) : null}
           </section>
 
           <aside className="card lg:sticky lg:top-36 lg:max-h-[calc(100dvh-11rem)] lg:overflow-y-auto">
