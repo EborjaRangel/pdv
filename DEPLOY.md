@@ -186,6 +186,7 @@ https://pdv.vercel.app,https://pdv-git-main-eborjarangel.vercel.app
 
 | Síntoma | Causa | Solución |
 |---------|-------|----------|
+| Railway deploy **Crashed** / 502 | `db:seed` falla sin `tsx` en producción, o falta `DATABASE_URL` | Redeploy tras último push; revisar Deploy Logs |
 | Railway build falla en Next.js | Root Directory no es `backend` | Paso 3.2 |
 | `/health` no responde en Railway | Deploy falló o sin dominio | Paso 3.4, revisar logs |
 | Login en Vercel no funciona | `FRONTEND_URL` mal o distinto `AUTH_SECRET` | Pasos 3.3, 4 y 6 |
