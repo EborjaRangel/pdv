@@ -1,5 +1,4 @@
-# Railway — API desde la raíz del repo (si Root Directory no está en backend)
-# Instala y arranca SOLO backend/, nunca Next.js.
+# Railway API — desde la raíz del repo (Next.js NO se despliega aquí)
 
 [build]
 builder = "NIXPACKS"

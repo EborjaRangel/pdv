@@ -1,6 +1,7 @@
 [build]
-builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+builder = "NIXPACKS"
+buildCommand = "npm install && npm run build"
 
 [deploy]
+startCommand = "npm run railway:start"
 restartPolicyType = "ON_FAILURE"
