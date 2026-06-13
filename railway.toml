@@ -1,8 +1,8 @@
-# Railway API — desde la raíz del repo (Next.js NO se despliega aquí)
+# Railway API — desde la raíz del repo
 
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm install --prefix backend && npm run build --prefix backend"
+buildCommand = "npm install --prefix backend && npm run build --prefix backend && rm -rf backend/dist"
 
 [deploy]
 startCommand = "npm run railway:start --prefix backend"

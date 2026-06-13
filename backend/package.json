@@ -7,6 +7,7 @@
     "build": "prisma generate",
     "build:check": "tsc --noEmit",
     "start": "tsx src/index.ts",
+    "start:legacy": "node dist/index.js",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:setup": "prisma db push && tsx prisma/seed.ts",
