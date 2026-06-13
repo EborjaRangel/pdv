@@ -3,7 +3,5 @@ builder = "NIXPACKS"
 buildCommand = "npm install && npm run build"
 
 [deploy]
-startCommand = "npm run db:push && npm run db:seed && npm start"
-healthcheckPath = "/health"
-healthcheckTimeout = 300
+startCommand = "npm run railway:start"
 restartPolicyType = "ON_FAILURE"
