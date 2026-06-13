@@ -10,7 +10,7 @@ function run(label, command, args) {
   console.log(`[railway-start] ${label} OK`);
 }
 
-if (!process.env.DATABASE_URL?.startsWith("postgresql")) {
+if (!/^postgres(ql)?:\/\//.test(process.env.DATABASE_URL ?? "")) {
   console.error(
     "[railway-start] DATABASE_URL invalid. Use Add Reference -> postgres -> DATABASE_URL",
   );
