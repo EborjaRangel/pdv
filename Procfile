@@ -1,1 +1,1 @@
-web: npm run railway:start --prefix backend
+web: node scripts/railway-start.mjs

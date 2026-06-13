@@ -5,5 +5,5 @@ builder = "NIXPACKS"
 buildCommand = "npm install --prefix backend && npm run build --prefix backend && rm -rf backend/dist"
 
 [deploy]
-startCommand = "npm run railway:start --prefix backend"
+startCommand = "node scripts/railway-start.mjs"
 restartPolicyType = "ON_FAILURE"
