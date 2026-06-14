@@ -5,12 +5,12 @@ import { redirect } from "next/navigation";
 import { roleHome, type Role } from "@/types/auth";
 import { getServerApiBase } from "@/lib/api-base";
 
-const apiProxy = getServerApiBase();
 const COOKIE_NAME = "pdv_token";
 
 export async function loginAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const apiBase = getServerApiBase();
 
   if (!email || !password) {
     redirect("/login?error=Credenciales%20requeridas");
@@ -18,7 +18,7 @@ export async function loginAction(formData: FormData) {
 
   let response: Response;
   try {
-    response = await fetch(`${apiProxy}/api/auth/login`, {
+    response = await fetch(`${apiBase}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
